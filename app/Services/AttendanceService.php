@@ -1,0 +1,80 @@
+<?php
+
+namespace App\Services;
+
+use App\Repositories\AttendanceRepository;
+use App\Repositories\HolidayRepository;
+
+class AttendanceService
+{
+    private $holidayrepo;
+    private $attendancerepo;
+
+    public function __construct(AttendanceRepository $attendancerepo, HolidayRepository $holidayrepo)
+    {
+        $this->attendancerepo = $attendancerepo;
+        $this->holidayrepo = $holidayrepo;
+    }
+
+    public function recordAttendance($student, $latitude, $longitude)
+    {
+        $date = now()->toDateString();
+        
+        $siap = $this->attendancerepo->isAttended($student->id, $date);
+
+        if($siap) {
+            throw new \Exception('Anda sudah melakukan absensi hari ini');
+        }
+
+        $time = now()->toTimeString();
+
+        if ($time < '06:00:00' || $time > '15:00:00') {
+            throw new \Exception('Waktu absensi di luar jam sekolah');
+        }
+
+        //gps sekolah
+        $schoolLatitude = -8.226982;
+        $schoolLongitude = 113.543931;
+
+        $distance = $this->calculateDistance($latitude, $longitude, $schoolLatitude, $schoolLongitude);
+
+        if($distance > 50) {
+            throw new \Exception('Anda berada di luar radius sekolah. jarak: ' . round($distance, 2) . ' meter');
+        }
+
+        if($this->holidayrepo->isHoliday($date)) {
+            $status = 'libur';
+        } else if ($time <= '08:00:00') {
+            $status = 'hadir';
+        } else {
+            $status = 'telat';
+        }
+
+        $attendance = $this->attendancerepo->create([
+            'student_id' => $student->id,
+            'date' => $date,
+            'time_in' => $time,
+            'status' => $status,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+        ]);
+
+        return $attendance;
+    }
+
+    private function calculateDistance($lat1, $lon1, $lat2, $lon2)
+    {
+        $earthRadius = 6371000; 
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon / 2) * sin($dLon / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
+    }
+}
