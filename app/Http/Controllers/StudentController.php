@@ -5,14 +5,18 @@ namespace App\Http\Controllers;
 use App\Helpers\ApiResponse;
 use App\Helpers\PaginationHelper;
 use App\Repositories\StudentRepository;
+use App\Services\StudentService;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
     private $repo;
-    public function __construct(StudentRepository $repo)
+    private $service;
+
+    public function __construct(StudentRepository $repo, StudentService $service)
     {
         $this->repo = $repo;
+        $this->service = $service;
     }
 
     public function index(Request $request) {
@@ -93,6 +97,39 @@ class StudentController extends Controller
             }
 
             return ApiResponse::Success(json_decode($student->face_descriptor),"Face descriptor berhasil diambil", 200);
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage(), 500);
+        }
+    }
+
+    public function verifyFace(Request $request) {
+        $request->validate([
+            'face_descriptor' => 'required|array',
+        ]);
+
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return ApiResponse::Custom(false, 'User tidak ditemukan', null, 404);
+            }
+
+            if (!$user->hasRole('student')) {
+                return ApiResponse::Custom(false, 'Hanya siswa yang dapat melakukan verifikasi wajah', null, 403);
+            }
+
+            $student = $user->student;
+            if (!$student) {
+                return ApiResponse::Custom(false, 'Data siswa tidak ditemukan', null, 404);
+            }
+
+            if(!$student->face_descriptor) {
+                return ApiResponse::Custom(false, 'Siswa belum melakukan registrasi wajah', null, 400);
+            }
+
+            $result = $this->service->verifyFaceDescriptor($student, $request->face_descriptor);
+
+            $message = $result['match'] ? "Wajah cocok" : "Wajah tidak cocok";
+            return ApiResponse::Success($result, $message, 200);
         } catch (\Exception $e) {
             return ApiResponse::Error($e->getMessage(), 500);
         }

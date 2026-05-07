@@ -20,4 +20,5 @@ Route::middleware(['auth:sanctum','role:student'])->group(function () {
     Route::get('/absen/me/today', [AttendanceController::class, 'today']);
     Route::post('/students/register-face', [StudentController::class, 'registerFace']);
     Route::get('/students/me/face', [StudentController::class, 'myFace']);
+    Route::post('/students/verify-face', [StudentController::class, 'verifyFace']);
 });
