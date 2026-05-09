@@ -104,4 +104,30 @@ class AttendanceController extends Controller
             return ApiResponse::Error($e->getMessage());
         }
     }
+
+    public function calender(Request $request) {
+        try {
+            $month = $request->month ?? now()->month;
+            $year = $request->year ?? now()->year;
+            $user = $request->user();
+            if(!$user) {
+                return ApiResponse::Custom(false, 'User tidak ditemukan', null, 404);
+            }
+
+            if(!$user->hasRole('student')) {
+                return ApiResponse::Custom(false, 'Hanya siswa yang dapat melihat data absensi', null, 403);
+            }
+
+            $student = $user->student;
+            if(!$student) {
+                return ApiResponse::Custom(false, 'Data siswa tidak ditemukan', null, 404);
+            }
+
+            $data = $this->repo->calender($student->id, $month, $year);
+            
+            return ApiResponse::Success($data, 'Data absensi berhasil diambil');
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
+    }
 }

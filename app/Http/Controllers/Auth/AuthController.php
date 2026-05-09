@@ -85,4 +85,38 @@ class AuthController extends Controller
 
         return ApiResponse::Custom(true, 'Logout berhasil', null, 200);
     }
+
+    public function me(Request $request)
+    {
+        $user = auth()->user();
+        $user->roles = $user->getRoleNames();
+        return ApiResponse::Custom(true, 'Data pengguna berhasil diambil', $user, 200);
+    }
+
+    public function changePassword(Request $request) {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|string|confirmed|min:8',
+            'new_password_confirmation' => 'required|string|min:8',
+        ],[
+            'current_password.required' => 'Password saat ini harus diisi',
+            'new_password.required' => 'Password baru harus diisi',
+            'new_password.confirmed' => 'Konfirmasi password baru tidak cocok',
+            'new_password.min' => 'Password baru minimal 8 karakter',
+            'new_password_confirmation.required' => 'Konfirmasi password baru harus diisi',
+            'new_password_confirmation.min' => 'Konfirmasi password baru minimal 8 karakter',
+        ]);
+
+        $user = auth()->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return ApiResponse::Custom(false, 'Password saat ini salah', null, 400);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return ApiResponse::Custom(true, 'Password berhasil diubah', null, 200);
+    }
 }

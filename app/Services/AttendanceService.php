@@ -9,11 +9,13 @@ class AttendanceService
 {
     private $holidayrepo;
     private $attendancerepo;
+    private $whatsappService;
 
-    public function __construct(AttendanceRepository $attendancerepo, HolidayRepository $holidayrepo)
+    public function __construct(AttendanceRepository $attendancerepo, HolidayRepository $holidayrepo, WhatsAppService $whatsappService)
     {
         $this->attendancerepo = $attendancerepo;
         $this->holidayrepo = $holidayrepo;
+        $this->whatsappService = $whatsappService;
     }
 
     public function recordAttendance($student, $latitude, $longitude)
@@ -58,6 +60,23 @@ class AttendanceService
             'latitude' => $latitude,
             'longitude' => $longitude,
         ]);
+
+        $parent = $student->parent;
+        $message = "Halo {$parent->name},
+        
+        Kami informasikan bahwa anak Anda {$student->user->name} telah melakukan absensi sekolah.
+        
+        📅 Tanggal: {$date}
+        ⏰ Jam: {$time}
+        📌 Status: {$status}
+
+        Terima kasih.";
+    
+        try {
+            $this->whatsappService->sendMessage($parent->phone, $message);
+        } catch (\Exception $e) {
+            \Log::error('Gagal mengirim pesan WhatsApp: ' . $e->getMessage());
+        }
 
         return $attendance;
     }

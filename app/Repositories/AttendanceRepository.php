@@ -71,4 +71,14 @@ class AttendanceRepository
             ->where('date', now()->toDateString())
             ->first();
     }
+
+    public function calender($studentId, $month, $year)
+    {
+        return $this->model
+            ->select('date', 'status')
+            ->where('student_id', $studentId)
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->get();
+    }
 }

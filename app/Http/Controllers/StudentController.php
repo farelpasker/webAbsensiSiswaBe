@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Helpers\PaginationHelper;
+use App\Http\Requests\StudentRequest;
 use App\Repositories\StudentRepository;
 use App\Services\StudentService;
 use Illuminate\Http\Request;
@@ -49,6 +50,16 @@ class StudentController extends Controller
             return ApiResponse::Create("Data siswa berhasil diambil", $student);
         } catch (\Exception $e) {
             return ApiResponse::Error($e->getMessage(), 404);
+        }
+    }
+
+    public function store(StudentRequest $request) {
+        try {
+            $data = $request->validated();
+            $student = $this->service->createStudent($data);
+            return ApiResponse::Create("Siswa berhasil dibuat", $student);
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage(), 400);
         }
     }
 
