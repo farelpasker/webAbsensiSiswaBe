@@ -16,12 +16,13 @@ class KelasRepository
 
     public function paginate(int $page, int $perPage, $search = null)
     {
-        $query = $this->model->query();
+        $query = $this->model->query()->withCount('students');
 
         if ($search) {
             $query->where('name', 'like', '%' . $search . '%');
         }
-        return $this->model->orderBy('created_at', 'desc')->paginate($perPage, ['*'], 'page', $page);
+
+        return $query->orderBy('created_at', 'desc')->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function create(array $data)

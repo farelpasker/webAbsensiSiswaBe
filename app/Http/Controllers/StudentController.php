@@ -138,5 +138,16 @@ class StudentController extends Controller
         }
     }
 
+    public function resetFaceDescriptor(string $id) {
+        try {
+            $student = $this->repo->findById($id);
+            $this->repo->resetFaceDescriptor($student);
+            return ApiResponse::Create("Face descriptor berhasil direset", null);
+        } catch (ModelNotFoundException $e) {
+            return ApiResponse::Error("Siswa tidak ditemukan", 404);
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage(), 400);
+        }
+    }
 }
 

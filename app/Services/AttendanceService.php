@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\AttendanceRepository;
 use App\Repositories\HolidayRepository;
+use App\Repositories\SettingRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
@@ -11,13 +12,15 @@ class AttendanceService
 {
     private $holidayrepo;
     private $attendancerepo;
+    private $settingrepo;
     private $whatsappService;
     private $studentService;
 
-    public function __construct(AttendanceRepository $attendancerepo, HolidayRepository $holidayrepo, WhatsAppService $whatsappService, StudentService $studentService)
+    public function __construct(AttendanceRepository $attendancerepo, HolidayRepository $holidayrepo, SettingRepository $settingrepo, WhatsAppService $whatsappService, StudentService $studentService)
     {
         $this->attendancerepo = $attendancerepo;
         $this->holidayrepo = $holidayrepo;
+        $this->settingrepo = $settingrepo;
         $this->whatsappService = $whatsappService;
         $this->studentService = $studentService;
     }
@@ -43,17 +46,21 @@ class AttendanceService
 
         $time = now()->toTimeString();
 
-        if ($time < '06:00:00' || $time > '15:00:00') {
-            throw new \Exception('Waktu absensi di luar jam sekolah');
-        }
+        // Get settings from database
+        $startTime = $this->settingrepo->get('attendance_start_time', '06:00:00');
+        $endTime = $this->settingrepo->get('attendance_end_time', '15:00:00');
+        $schoolLatitude = $this->settingrepo->get('school_latitude', -8.226982);
+        $schoolLongitude = $this->settingrepo->get('school_longitude', 113.543931);
+        $attendanceRadius = $this->settingrepo->get('attendance_radius', 50);
+        $onTimeUntil = $this->settingrepo->get('on_time_until', '08:00:00');
 
-        //gps sekolah
-        $schoolLatitude = -8.226982;
-        $schoolLongitude = 113.543931;
+        if ($time < $startTime || $time > $endTime) {
+            throw new \Exception("Waktu absensi di luar jam sekolah ({$startTime} - {$endTime})");
+        }
 
         $distance = $this->calculateDistance($latitude, $longitude, $schoolLatitude, $schoolLongitude);
 
-        if($distance > 50) {
+        if($distance > $attendanceRadius) {
             throw new \Exception('Anda berada di luar radius sekolah. jarak: ' . round($distance, 2) . ' meter');
         }
 
@@ -61,15 +68,19 @@ class AttendanceService
         if(
             $this->holidayrepo->isHoliday($date) || $carbon->isSaturday() || $carbon->isSunday() || $this->isNationalHoliday($date)) {
             throw new \Exception('Hari ini adalah hari libur, tidak perlu melakukan absensi');
-        } else if ($time <= '08:00:00') {
+        } else if ($time <= $onTimeUntil) {
             $status = 'hadir';
         } else {
             $status = 'telat';
         }
 
-        $attendance = $this->attendancerepo->create([
-            'student_id' => $student->id,
-            'date' => $date,
+        $attendance = $this->attendancerepo->getTodayAttendance($student->id);
+
+        if (!$attendance) {
+            throw new \Exception('Attendance record tidak ditemukan. Hubungi admin sekolah.');
+        }
+
+        $attendance->update([
             'time_in' => $time,
             'status' => $status,
             'latitude' => $latitude,

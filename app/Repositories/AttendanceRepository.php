@@ -13,14 +13,26 @@ class AttendanceRepository
         $this->model = $model;
     }
 
-    public function getList($search = null, int $page = 1, int $perPage = 10)
+    public function getList($params, int $page = 1, int $perPage = 10)
     {
         $query = $this->model->query();
 
-        if($search) {
-            $query->whereHas('student', function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%');
+        if(isset($params['search']) && !empty($params['search'])) {
+            $query->whereHas('student', function($q) use ($params) {
+                $q->where('name', 'like', '%' . $params['search'] . '%');
             });
+        }
+
+        if(isset($params['date_from']) && isset($params['date_to'])) {
+            $query->whereBetween('date', [$params['date_from'], $params['date_to']]);
+        } elseif (isset($params['date_from'])) {
+            $query->where('date', '>=', $params['date_from']);
+        } elseif (isset($params['date_to'])) {
+            $query->where('date', '<=', $params['date_to']);
+        }
+
+        if(isset($params['status']) && !empty($params['status'])) {
+            $query->where('status', $params['status']);
         }
 
         return $query->orderBy('created_at', 'desc')
@@ -80,5 +92,37 @@ class AttendanceRepository
             ->whereYear('date', $year)
             ->whereMonth('date', $month)
             ->get();
+    }
+
+    public function getListByTeacher($teacherId, $params, int $page = 1, int $perPage = 10)
+    {
+        $query = $this->model->whereHas('student', function($q) use ($teacherId) {
+            $q->whereHas('kelas', function($q2) use ($teacherId) {
+                $q2->whereHas('teacherClassrooms', function($q3) use ($teacherId) {
+                    $q3->where('teacher_id', $teacherId);
+                });
+            });
+        });
+
+        if(isset($params['search']) && !empty($params['search'])) {
+            $query->whereHas('student', function($q) use ($params) {
+                $q->where('name', 'like', '%' . $params['search'] . '%');
+            });
+        }
+
+        if(isset($params['date_from']) && isset($params['date_to'])) {
+            $query->whereBetween('date', [$params['date_from'], $params['date_to']]);
+        } elseif (isset($params['date_from'])) {
+            $query->where('date', '>=', $params['date_from']);
+        } elseif (isset($params['date_to'])) {
+            $query->where('date', '<=', $params['date_to']);
+        }
+
+        if(isset($params['status']) && !empty($params['status'])) {
+            $query->where('status', $params['status']);
+        }
+
+        return $query->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
     }
 }

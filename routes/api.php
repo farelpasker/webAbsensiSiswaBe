@@ -6,6 +6,7 @@ use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\KelasController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\ParentController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use Illuminate\Http\Request;
@@ -38,6 +39,13 @@ Route::middleware(['auth:sanctum','role:admin','handle.role.auth'])->group(funct
     Route::apiResource('/kelas', KelasController::class);
     //holiday
     Route::apiResource('/holidays', HolidayController::class);
+    //rekap absensi
+    Route::get('/absen/admin', [AttendanceController::class, 'index']);
+    //reset face descriptor
+    Route::post('/students/{student}/reset-face', [StudentController::class, 'resetFaceDescriptor']);
+    //settings
+    Route::apiResource('/settings', SettingController::class);
+    Route::post('/settings/initialize-defaults', [SettingController::class, 'initializeDefaults']);
 });
 
 Route::middleware(['auth:sanctum','role:student','handle.role.auth'])->group(function () {
@@ -52,6 +60,14 @@ Route::middleware(['auth:sanctum','role:student','handle.role.auth'])->group(fun
     //student
     Route::post('/students/register-face', [StudentController::class, 'registerFace']);
     Route::get('/students/me/face', [StudentController::class, 'myFace']);
+    //settings - get attendance settings
+    Route::get('/settings/attendance', [SettingController::class, 'getAttendanceSettings']);
+});
+
+Route::middleware(['auth:sanctum','role:teacher','handle.role.auth'])->group(function () {
+    //attendance
+    Route::get('/absen/teacher', [AttendanceController::class, 'listByTeacher']);
+
 });
 
 Route::middleware(['auth:sanctum','role:teacher|admin','handle.role.auth'])->group(function () {

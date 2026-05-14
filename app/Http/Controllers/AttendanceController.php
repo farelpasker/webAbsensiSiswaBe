@@ -20,12 +20,58 @@ class AttendanceController extends Controller
         $this->repo = $repo;
     }
 
+    public function index(Request $request) {
+        try {
+            $page = $request->page ?? 1;
+            $perPage = $request->per_page ?? 10;
+            $params = $request->only(['search','date_from','date_to','status']);
+            $data = $this->repo->getList($params, $page, $perPage);
+            return ApiResponse::Paginate($data->items(), 'Data absensi berhasil diambil', PaginationHelper::meta($data));
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
+    }
+
+    public function listByTeacher(Request $request) {
+        try {
+            $page = $request->page ?? 1;
+            $perPage = $request->per_page ?? 10;
+            $params = $request->only(['search','date_from','date_to','status']);
+            $user = auth()->user();
+
+            if(!$user) {
+                return ApiResponse::Custom(false, 'User tidak ditemukan', null, 404);
+            }
+
+            if(!$user->hasRole('teacher')) {
+                return ApiResponse::Custom(false, 'Hanya guru yang dapat melihat data absensi', null, 403);
+            }
+
+            $teacher = $user;
+            if(!$teacher->teacherClassrooms()->exists()) {
+                return ApiResponse::Custom(false, 'Anda belum memiliki kelas yang diajar', null, 404);
+            }
+            $data = $this->repo->getListByTeacher($teacher->id, $params, $page, $perPage);
+            return ApiResponse::Paginate($data->items(), 'Data absensi berhasil diambil', PaginationHelper::meta($data));
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
+    }
+
     public function absen(Request $request) {
         
         $request->validate([
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
             'face_descriptor' => 'required|array',
+        ],
+        [
+            'latitude.required' => 'Latitude wajib diisi',
+            'latitude.numeric' => 'Latitude harus berupa angka',
+            'longitude.required' => 'Longitude wajib diisi',
+            'longitude.numeric' => 'Longitude harus berupa angka',
+            'face_descriptor.required' => 'Face descriptor wajib diisi',
+            'face_descriptor.array' => 'Face descriptor harus berupa array',
         ]);
 
         DB::beginTransaction();

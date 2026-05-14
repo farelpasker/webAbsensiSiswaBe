@@ -21,6 +21,6 @@ class Kelas extends Model
 
     public function teacherClassrooms()
     {
-        return $this->hasMany(TeacherClassroom::class, 'kelas_id');
+        return $this->hasMany(TeacherClassroom::class);
     }
 }

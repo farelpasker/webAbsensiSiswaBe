@@ -71,4 +71,12 @@ class StudentRepository
             ]);
         return $student;
     }
+
+    public function resetFaceDescriptor($student)
+    {
+        $student->update([
+            'face_descriptor' => null
+        ]);
+        return $student;
+    }
 }
