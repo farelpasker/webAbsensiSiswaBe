@@ -25,6 +25,7 @@ class AttendanceController extends Controller
         $request->validate([
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
+            'face_descriptor' => 'required|array',
         ]);
 
         DB::beginTransaction();
@@ -43,7 +44,7 @@ class AttendanceController extends Controller
                 return ApiResponse::Custom(false, 'Data siswa tidak ditemukan', null, 404);
             }
     
-            $data = $this->service->recordAttendance($student, $request->latitude, $request->longitude);
+            $data = $this->service->recordAttendance($student, $request->latitude, $request->longitude, $request->face_descriptor);
             DB::commit();
             return ApiResponse::Create('Absensi berhasil disimpan', $data);
         } catch (\Exception $e) {

@@ -21,10 +21,8 @@ class HolidayRepository
             $query->where('name', 'like', '%' . $search . '%');
         }
 
-        $query->orderBy('created_at', 'desc')
-        ->paginate($perPage, ['*'], 'page', $page);
-
-        return $query;
+        return $query->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function getDetail($id)

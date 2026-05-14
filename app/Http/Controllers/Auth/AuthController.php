@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Helpers\ApiResponse;
+use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProfileRequest;
 use App\Models\Student;
 use App\Models\User;
+use App\Repositories\UserRepository;
+use App\Services\UserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +17,13 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    private $service;
+    private $repo;
+    public function __construct(UserService $user, UserRepository $repo)
+    {
+        $this->service = $user;
+        $this->repo = $repo;
+    }
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -86,7 +97,7 @@ class AuthController extends Controller
         return ApiResponse::Custom(true, 'Logout berhasil', null, 200);
     }
 
-    public function me(Request $request)
+    public function me()
     {
         $user = auth()->user();
         $user->roles = $user->getRoleNames();
@@ -118,5 +129,25 @@ class AuthController extends Controller
         ]);
 
         return ApiResponse::Custom(true, 'Password berhasil diubah', null, 200);
+    }
+
+    public function updateProfile(ProfileRequest $request) {
+        $data = $request->validated();
+        $user = auth()->user();
+        $this->service->updateUser($user->id, $data);
+        // Refresh user untuk mendapatkan data terbaru termasuk avatar
+        $user->refresh();
+        return ApiResponse::Custom(true, 'Profil berhasil diperbarui', $user, 200);
+    }
+
+    public function listUsers(Request $request) {
+        try {
+            $page = $request->page ?? 1;
+            $perPage = $request->per_page ?? 10;
+            $data = $this->repo->listUsers($page, $perPage);
+            return ApiResponse::Paginate($data->items(), 'Data pengguna berhasil diambil', PaginationHelper::meta($data));
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
     }
 }

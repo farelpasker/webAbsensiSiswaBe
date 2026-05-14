@@ -18,11 +18,16 @@ class UserService
     public function updateUser($id, $data)
     {
         $user = $this->userrepo->getDetail($id);
+
+        if (isset($data['email']) && $data['email'] === $user->email) {
+            unset($data['email']);
+        }
+        
         if(!empty($data['avatar'])){
             if($user->avatar) {
-                Storage::delete($user->avatar);
+                Storage::disk('public')->delete($user->avatar);
             }
-            $avatarPath = $data['avatar']->store('avatars');
+            $avatarPath = $data['avatar']->store('avatars', 'public');
             $data['avatar'] = $avatarPath;
         }
         return $this->userrepo->update($id, $data);

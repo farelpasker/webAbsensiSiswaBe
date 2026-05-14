@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -36,6 +37,18 @@ class User extends Authenticatable
         ];
     }
 
+    protected function avatar(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                if (!$value) {
+                    return null;
+                }
+                return url('storage/' . $value);
+            }
+        );
+    }
+
     public function student()
     {
         return $this->hasOne(Student::class);
@@ -44,5 +57,10 @@ class User extends Authenticatable
     public function children()
     {
         return $this->hasMany(Student::class, 'parent_id');
+    }
+
+    public function teacherClassrooms()
+    {
+        return $this->hasMany(TeacherClassroom::class, 'teacher_id');
     }
 }

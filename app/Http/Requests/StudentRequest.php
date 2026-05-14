@@ -22,7 +22,7 @@ class StudentRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
@@ -31,6 +31,17 @@ class StudentRequest extends FormRequest
             'kelas_id' => 'required|exists:kelas,id',
             'parent_id' => 'nullable|exists:users,id',
         ];
+
+        if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
+            $student = $this->route('student');
+            if ($student && $student->user) {
+                $rules['email'] = 'required|string|email|max:255|unique:users,email,' . $student->user->id . ',id';
+                $rules['nis'] = 'required|string|unique:students,nis,' . $student->id . ',id';
+            }
+            $rules['password'] = 'nullable|string|min:8';
+        }
+
+        return $rules;
     }
 
     public function messages(): array

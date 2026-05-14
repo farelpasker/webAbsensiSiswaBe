@@ -13,19 +13,24 @@ class LeaveRequestRepository
         $this->model = $model;
     }
 
-    public function paginate($params, $page, $perPage)
+    public function paginate($page, $perPage, $search = null, $date = null)
     {
         $query = $this->model->query();
 
-        if (isset($params['student_id'])) {
-            $query->where('student_id', $params['student_id']);
+        if ($search) {
+            $query->whereHas('student.user', function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%');
+            });
         }
 
-        if (isset($params['status'])) {
-            $query->where('status', $params['status']);
+        if ($date) {
+            $query->where('start_date', $date);
         }
 
-        return $query->orderBy('created_at', 'desc')->paginate($perPage, ['*'], 'page', $page);
+        return $query
+        ->with('student:id,user_id,kelas_id','student.user:id,name,email,phone','student.kelas:id,nama')
+        ->orderBy('created_at', 'desc')
+        ->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function create($data)
@@ -35,7 +40,9 @@ class LeaveRequestRepository
 
     public function findById($id)
     {
-        return $this->model->find($id);
+        return $this->model
+        ->with('student:id,user_id,kelas_id','student.user:id,name,email,phone','student.kelas:id,nama')
+        ->findOrFail($id);
     }
 
     public function update($id, $data)
@@ -58,12 +65,21 @@ class LeaveRequestRepository
         return false;
     }
 
-    public function studentHasPendingRequest($studentId, $date)
+    public function studentHasPendingRequest($studentId, $fromDate)
     {
         return $this->model->where('student_id', $studentId)
-            ->where('date', $date)
+            ->where('start_date', $fromDate)
             ->where('status', 'pending')
             ->exists();
+    }
+
+    public function paginateByStudent($studentId, $page, $perPage)
+    {
+        return $this->model
+        ->where('student_id', $studentId)
+        ->with('student:id,user_id,kelas_id','student.user:id,name,email,phone','student.kelas:id,nama')
+        ->orderBy('created_at', 'desc')
+        ->paginate($perPage, ['*'], 'page', $page);
     }
 
 }

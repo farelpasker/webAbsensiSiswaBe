@@ -70,4 +70,47 @@ class StudentService
             return $student;
         });
     }
+
+    public function updateStudent($id, $data)
+    {
+        return DB::transaction(function() use ($id, $data) {
+            $student = $this->studentrepo->findById($id);
+            $user = $student->user;
+
+            $updateData = [
+                'name' => $data['name'],
+                'phone' => $data['phone'] ?? null,
+            ];
+
+            // Hanya update email jika berbeda (untuk menghindari unique constraint)
+            if ($data['email'] !== $user->email) {
+                $updateData['email'] = $data['email'];
+            }
+
+            if (!empty($data['password'])) {
+                $updateData['password'] = bcrypt($data['password']);
+            }
+
+            $this->userrepo->update($user->id, $updateData);
+
+            $studentUpdateData = [
+                'nis' => $data['nis'],
+                'kelas_id' => $data['kelas_id'],
+                'parent_id' => $data['parent_id'] ?? null,
+            ];
+
+            return $this->studentrepo->update($id, $studentUpdateData);
+        });
+    }
+
+    public function deleteStudent($id)
+    {
+        return DB::transaction(function() use ($id) {
+            $student = $this->studentrepo->findById($id);
+            $userId = $student->user_id;
+
+            $this->studentrepo->delete($id);
+            return $this->userrepo->delete($userId);
+        });
+    }
 }

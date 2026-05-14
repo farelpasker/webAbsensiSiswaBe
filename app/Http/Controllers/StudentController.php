@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Helpers\ApiResponse;
 use App\Helpers\PaginationHelper;
 use App\Http\Requests\StudentRequest;
+use App\Models\Student;
 use App\Repositories\StudentRepository;
 use App\Services\StudentService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
@@ -63,6 +65,29 @@ class StudentController extends Controller
         }
     }
 
+    public function update(StudentRequest $request, Student $student) {
+        try {
+            $data = $request->validated();
+            $student = $this->service->updateStudent($student->id, $data);
+            return ApiResponse::Create("Siswa berhasil diperbarui", $student);
+        } catch (ModelNotFoundException $e) {
+            return ApiResponse::Error("Siswa tidak ditemukan", 404);
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage(), 400);
+        }
+    }
+
+    public function destroy(Student $student) {
+        try {
+            $this->service->deleteStudent($student->id);
+            return ApiResponse::Create("Siswa berhasil dihapus", null);
+        } catch (ModelNotFoundException $e) {
+            return ApiResponse::Error("Siswa tidak ditemukan", 404);
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage(), 400);
+        }
+    }
+
     public function registerFace(Request $request)
     {
         $request->validate([
@@ -113,36 +138,5 @@ class StudentController extends Controller
         }
     }
 
-    public function verifyFace(Request $request) {
-        $request->validate([
-            'face_descriptor' => 'required|array',
-        ]);
-
-        try {
-            $user = auth()->user();
-            if (!$user) {
-                return ApiResponse::Custom(false, 'User tidak ditemukan', null, 404);
-            }
-
-            if (!$user->hasRole('student')) {
-                return ApiResponse::Custom(false, 'Hanya siswa yang dapat melakukan verifikasi wajah', null, 403);
-            }
-
-            $student = $user->student;
-            if (!$student) {
-                return ApiResponse::Custom(false, 'Data siswa tidak ditemukan', null, 404);
-            }
-
-            if(!$student->face_descriptor) {
-                return ApiResponse::Custom(false, 'Siswa belum melakukan registrasi wajah', null, 400);
-            }
-
-            $result = $this->service->verifyFaceDescriptor($student, $request->face_descriptor);
-
-            $message = $result['match'] ? "Wajah cocok" : "Wajah tidak cocok";
-            return ApiResponse::Success($result, $message, 200);
-        } catch (\Exception $e) {
-            return ApiResponse::Error($e->getMessage(), 500);
-        }
-    }
 }
+

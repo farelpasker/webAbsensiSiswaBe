@@ -32,12 +32,17 @@ class StudentRepository
             $query->where('kelas_id', $data['kelas_id']);
         }
 
-        return $query->paginate($perPage, ['*'], 'page', $page);
+        return $query
+        ->with('user:id,name,email,phone','kelas:id,nama','parent:id,name,email,phone')
+        ->orderBy('created_at', 'desc')
+        ->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function findById($id)
     {
-        return $this->model->findOrFail($id);
+        return $this->model
+        ->with('user:id,name,email,phone','kelas:id,nama','parent:id,name,email,phone')
+        ->findOrFail($id);
     }
 
     public function create(array $data)

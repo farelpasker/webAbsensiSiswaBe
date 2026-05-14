@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AttendanceStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,10 @@ class Attendance extends Model
     protected $table = 'attendances';
 
     protected $fillable = ['student_id', 'date', 'time_in', 'time_out', 'status','longitude','latitude'];
+
+    protected $casts = [
+        'status' => AttendanceStatus::class,
+    ];
 
     public function student()
     {
