@@ -47,4 +47,18 @@ class KelasRepository
         $kelas = $this->model->findOrFail($id);
         return $kelas->delete();
     }
+
+    public function getMyClasses($teacherId)
+    {
+        return $this->model->whereHas('teacherClassrooms', function($q) use ($teacherId) {
+            $q->where('teacher_id', $teacherId);
+        })->withCount('students')->get();
+    }
+
+    public function findClassByTeacher($teacherId, $kelasId)
+    {
+        return $this->model->where('id', $kelasId)->whereHas('teacherClassrooms', function($q) use ($teacherId) {
+            $q->where('teacher_id', $teacherId);
+        })->first();
+    }
 }

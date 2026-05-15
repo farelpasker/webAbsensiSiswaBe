@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Student;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StudentRepository
 {
@@ -11,6 +12,13 @@ class StudentRepository
     public function __construct(Student $model)
     {
         $this->model = $model;
+    }
+
+    public function getList()
+    {
+        $query = $this->model->query()->with('user:id,name,email,phone','kelas:id,nama','parent:id,name,email,phone');
+
+        return $query->orderBy('created_at', 'desc');
     }
 
     public function paginate(array $data,int $page,int $perPage)
@@ -78,5 +86,11 @@ class StudentRepository
             'face_descriptor' => null
         ]);
         return $student;
+    }
+
+    public function exportStudents($params)
+    {
+        $fileName = 'students_' . date('Ymd_His') . '.xlsx';
+        return Excel::download(new \App\Exports\StudentsExport($params), $fileName);
     }
 }

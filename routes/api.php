@@ -41,11 +41,16 @@ Route::middleware(['auth:sanctum','role:admin','handle.role.auth'])->group(funct
     Route::apiResource('/holidays', HolidayController::class);
     //rekap absensi
     Route::get('/absen/admin', [AttendanceController::class, 'index']);
+    Route::get('/absen/recap', [AttendanceController::class, 'recap']);
     //reset face descriptor
     Route::post('/students/{student}/reset-face', [StudentController::class, 'resetFaceDescriptor']);
     //settings
     Route::apiResource('/settings', SettingController::class);
     Route::post('/settings/initialize-defaults', [SettingController::class, 'initializeDefaults']);
+    //export excel
+    Route::get('/absen/export', [AttendanceController::class, 'exportExcelByAdmin']);
+    Route::get('/absen/export-recap', [AttendanceController::class, 'exportRecapExcelByAdmin']);
+    Route::get('/students/export', [StudentController::class, 'export']);
 });
 
 Route::middleware(['auth:sanctum','role:student','handle.role.auth'])->group(function () {
@@ -67,6 +72,10 @@ Route::middleware(['auth:sanctum','role:student','handle.role.auth'])->group(fun
 Route::middleware(['auth:sanctum','role:teacher','handle.role.auth'])->group(function () {
     //attendance
     Route::get('/absen/teacher', [AttendanceController::class, 'listByTeacher']);
+    Route::get('/absen/teacher/recap/{kelasId}', [AttendanceController::class, 'recapClassByTeacher']);
+    Route::get('/absen/teacher/export-recap/{kelasId}', [AttendanceController::class, 'exportRecapClassByTeacher']);
+    //kelas
+    Route::get('/my/classes', [KelasController::class, 'myClasses']);
 
 });
 

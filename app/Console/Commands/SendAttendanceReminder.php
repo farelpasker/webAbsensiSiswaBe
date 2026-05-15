@@ -59,12 +59,12 @@ class SendAttendanceReminder extends Command
             $response = $this->whatsappService->sendMessage($phone, $message);
             
             if (isset($response['status']) && $response['status'] === true) {
-                $this->line("  ✓ {$type} ({$name})");
+                $this->line("  ✓ {$type} ({$name}) → {$phone}");
             } else {
-                $this->warn("  ✗ {$type} ({$name}) - gagal");
+                $this->warn("  ✗ {$type} ({$name}) → {$phone} - gagal");
             }
         } catch (\Exception $e) {
-            $this->error("  ✗ {$type} ({$name}) - {$e->getMessage()}");
+            $this->error("  ✗ {$type} ({$name}) → {$phone} - {$e->getMessage()}");
         }
     }
 }

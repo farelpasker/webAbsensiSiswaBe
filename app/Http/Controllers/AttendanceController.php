@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ApiResponse;
 use App\Helpers\PaginationHelper;
 use App\Repositories\AttendanceRepository;
+use App\Repositories\KelasRepository;
 use App\Services\AttendanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,11 +14,13 @@ class AttendanceController extends Controller
 {
     private $service;
     private $repo;
+    private $kelasRepo;
 
-    public function __construct(AttendanceService $service, AttendanceRepository $repo)
+    public function __construct(AttendanceService $service, AttendanceRepository $repo, KelasRepository $kelasRepo)
     {
         $this->service = $service;
         $this->repo = $repo;
+        $this->kelasRepo = $kelasRepo;
     }
 
     public function index(Request $request) {
@@ -173,6 +176,91 @@ class AttendanceController extends Controller
             $data = $this->repo->calender($student->id, $month, $year);
             
             return ApiResponse::Success($data, 'Data absensi berhasil diambil');
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
+    }
+
+    public function exportExcelByAdmin(Request $request) {
+        try {
+            $params = $request->only(['month', 'year', 'kelas_id', 'status']);
+            return $this->repo->exportExcelByAdmin($params);
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
+    }
+
+    public function exportRecapExcelByAdmin(Request $request) {
+        try {
+            $params = $request->only(['month', 'year', 'kelas_id', 'status']);
+            return $this->repo->exportRecapExcelByAdmin($params);
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
+    }
+
+    public function recap(Request $request) {
+        try {
+            $params = $request->only(['month', 'year', 'kelas_id', 'status']);
+            $data = $this->repo->recap($params);
+            return ApiResponse::Success($data, 'Rekap absensi berhasil diambil');
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
+    }
+
+    public function recapClassByTeacher(Request $request, $kelasId) {
+        try {
+            $user = auth()->user();
+            if(!$user) {
+                return ApiResponse::Custom(false, 'User tidak ditemukan', null, 404);
+            }
+
+            if(!$user->hasRole('teacher')) {
+                return ApiResponse::Custom(false, 'Hanya guru yang dapat melihat rekap absensi', null, 403);
+            }
+
+            $teacher = $user;
+            if(!$teacher->teacherClassrooms()->exists()) {
+                return ApiResponse::Custom(false, 'Anda belum memiliki kelas yang diajar', null, 404);
+            }
+
+            $kelas = $this->kelasRepo->findClassByTeacher($teacher->id, $kelasId);
+            if(!$kelas) {
+                return ApiResponse::Custom(false, 'Anda tidak mengajar kelas ini', null, 404);
+            }
+
+            $params = $request->only(['month', 'year']);
+            $data = $this->repo->recapClassByTeacher($teacher->id, $params, $kelasId);
+            return ApiResponse::Success($data, 'Rekap absensi berhasil diambil');
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
+    }
+
+    public function exportRecapClassByTeacher(Request $request, $kelasId) {
+        try {
+            $user = auth()->user();
+            if(!$user) {
+                return ApiResponse::Custom(false, 'User tidak ditemukan', null, 404);
+            }
+
+            if(!$user->hasRole('teacher')) {
+                return ApiResponse::Custom(false, 'Hanya guru yang dapat mengexport rekap absensi', null, 403);
+            }
+
+            $teacher = $user;
+            if(!$teacher->teacherClassrooms()->exists()) {
+                return ApiResponse::Custom(false, 'Anda belum memiliki kelas yang diajar', null, 404);
+            }
+
+            $kelas = $this->kelasRepo->findClassByTeacher($teacher->id, $kelasId);
+            if(!$kelas) {
+                return ApiResponse::Custom(false, 'Anda tidak mengajar kelas ini', null, 404);
+            }
+
+            $params = $request->only(['month', 'year']);
+            return $this->repo->exportRecapClassByTeacher($teacher->id, $params, $kelasId);
         } catch (\Exception $e) {
             return ApiResponse::Error($e->getMessage());
         }

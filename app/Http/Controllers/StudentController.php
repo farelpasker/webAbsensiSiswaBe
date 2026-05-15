@@ -149,5 +149,14 @@ class StudentController extends Controller
             return ApiResponse::Error($e->getMessage(), 400);
         }
     }
+
+    public function export(Request $request) {
+        try {
+            $params = $request->only(['kelas_id', 'search']);
+            return $this->repo->exportStudents($params);
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage(), 400);
+        }
+    }
 }
 

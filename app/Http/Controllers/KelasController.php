@@ -79,4 +79,22 @@ class KelasController extends Controller
             return ApiResponse::Error("Gagal menghapus kelas: " . $e->getMessage());
         }
     }
+
+    public function myClasses(Request $request) {
+        try {
+            $user = auth()->user();
+            if(!$user) {
+                return ApiResponse::Custom(false, 'User tidak ditemukan', null, 404);
+            }
+
+            if(!$user->hasRole('teacher')) {
+                return ApiResponse::Custom(false, 'Hanya guru yang dapat melihat data kelas', null, 403);
+            }
+
+            $data = $this->repo->getMyClasses($user->id);
+            return ApiResponse::Success($data, "Berhasil mengambil data kelas");
+        } catch (\Exception $e) {
+            return ApiResponse::Error("Gagal mengambil data kelas: " . $e->getMessage());
+        }
+    }
 }
