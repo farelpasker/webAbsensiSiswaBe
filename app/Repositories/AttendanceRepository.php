@@ -19,14 +19,15 @@ class AttendanceRepository
         $this->studentRepo = $studentRepo;
     }
 
-    public function getList($params, int $page = 1, int $perPage = 10)
+    public function getList($params, int $page = 1, int $perPage = 10): array
     {
-        $query = $this->model->query()->with('student:id,nis,user_id,kelas_id','student.user:id,name','student.kelas:id,nama');
+        $query = $this->model->query()->with('student:id,nis,user_id,kelas_id','student.user:id,name,avatar','student.kelas:id,nama');
 
         if(isset($params['search']) && !empty($params['search'])) {
-            $query->whereHas('student', function($q) use ($params) {
-                $q->where('name', 'like', '%' . $params['search'] . '%');
-            });
+            $search = $params['search'];
+            $query->whereHas('student.user', function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%');
+            })->orWhere('date', 'like', '%' . $search . '%');
         }
 
         if(isset($params['date_from']) && isset($params['date_to'])) {
@@ -41,8 +42,21 @@ class AttendanceRepository
             $query->where('status', $params['status']);
         }
 
-        return $query->orderBy('created_at', 'desc')
+        $baseQuery = $query;
+        
+        $totalStudents = $this->studentRepo->getList()->count();
+        $hadirCount = $baseQuery->clone()->whereIn('status', ['hadir','telat'])->count();
+        $tidakHadirCount = $baseQuery->clone()->whereIn('status', ['tidak hadir','izin','sakit'])->count();
+
+        $paginate = $query->orderBy('created_at', 'desc')
             ->paginate($perPage, ['*'], 'page', $page);
+        
+        return [
+            'total_student' => $totalStudents,
+            'hadir_count' => $hadirCount,
+            'tidak_hadir_count' => $tidakHadirCount,
+            'paginate' => $paginate
+        ];
     }
 
     public function getDetail($id)

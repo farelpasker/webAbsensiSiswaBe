@@ -27,9 +27,20 @@ class AttendanceController extends Controller
         try {
             $page = $request->page ?? 1;
             $perPage = $request->per_page ?? 10;
-            $params = $request->only(['search','date_from','date_to','status']);
-            $data = $this->repo->getList($params, $page, $perPage);
-            return ApiResponse::Paginate($data->items(), 'Data absensi berhasil diambil', PaginationHelper::meta($data));
+            $params = $request->only(['search','date_from','date_to','status','kelas_id']);
+            $result = $this->repo->getList($params, $page, $perPage);
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data absensi berhasil diambil',
+                'data' => $result['paginate']->items(),
+                'summary' => [
+                    'total_student' => $result['total_student'],
+                    'hadir_count' => $result['hadir_count'],
+                    'tidak_hadir_count' => $result['tidak_hadir_count']
+                ],
+                'paginate' => PaginationHelper::meta($result['paginate'])
+            ])->setStatusCode(200);
         } catch (\Exception $e) {
             return ApiResponse::Error($e->getMessage());
         }
