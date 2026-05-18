@@ -30,6 +30,15 @@ class KelasController extends Controller
         return ApiResponse::Paginate($data->items(), "Berhasil mengambil data kelas", PaginationHelper::meta($data));
     }
 
+    public function getList() {
+        try {
+            $data = $this->repo->getList();
+            return ApiResponse::Success($data, "Berhasil mengambil data kelas");
+        } catch (\Exception $e) {
+            return ApiResponse::Error("Gagal mengambil data kelas: " . $e->getMessage());
+        }
+    }
+
     public function store(Request $request) {
         $request->validate([
             'name' => 'required|string|max:255',

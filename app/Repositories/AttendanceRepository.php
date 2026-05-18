@@ -42,6 +42,12 @@ class AttendanceRepository
             $query->where('status', $params['status']);
         }
 
+        if(isset($params['kelas_id']) && !empty($params['kelas_id'])) {
+            $query->whereHas('student', function($q) use ($params) {
+                $q->where('kelas_id', $params['kelas_id']);
+            });
+        }
+
         $baseQuery = $query;
         
         $totalStudents = $this->studentRepo->getList()->count();

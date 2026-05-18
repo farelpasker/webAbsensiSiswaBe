@@ -20,6 +20,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/change-password', [AuthController::class, 'changePassword']);
     Route::put('/update-profile', [AuthController::class, 'updateProfile']);
+    Route::get('kelas/no-paginate', [KelasController::class, 'getList']);
 });
 
 Route::middleware(['auth:sanctum','role:admin','handle.role.auth'])->group(function () {

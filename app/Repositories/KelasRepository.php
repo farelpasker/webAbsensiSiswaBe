@@ -14,6 +14,12 @@ class KelasRepository
         $this->model = $model;
     }
 
+    public function getList($params = [])
+    {
+        $query = $this->model->all();
+        return $query->sortByDesc('created_at')->values();
+    }
+
     public function paginate(int $page, int $perPage, $search = null)
     {
         $query = $this->model->query()->withCount('students');
