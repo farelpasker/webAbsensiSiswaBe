@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\KelasController;
 use App\Http\Controllers\LeaveRequestController;
@@ -43,6 +44,7 @@ Route::middleware(['auth:sanctum','role:admin','handle.role.auth'])->group(funct
     //rekap absensi
     Route::get('/absen/admin', [AttendanceController::class, 'index']);
     Route::get('/absen/recap', [AttendanceController::class, 'recap']);
+    Route::get('/absen/today', [AttendanceController::class, 'indexTodayAdmin']);
     //reset face descriptor
     Route::post('/students/{student}/reset-face', [StudentController::class, 'resetFaceDescriptor']);
     //settings
@@ -52,6 +54,9 @@ Route::middleware(['auth:sanctum','role:admin','handle.role.auth'])->group(funct
     Route::get('/absen/export', [AttendanceController::class, 'exportExcelByAdmin']);
     Route::get('/absen/export-recap', [AttendanceController::class, 'exportRecapExcelByAdmin']);
     Route::get('/students/export', [StudentController::class, 'export']);
+    //dashboard
+    Route::get('/dashboard/admin', [DashboardController::class, 'dashboardAdmin']);
+    Route::get('/dashboard/attendance-summary', [DashboardController::class, 'attendanceSummary']);
 });
 
 Route::middleware(['auth:sanctum','role:student','handle.role.auth'])->group(function () {

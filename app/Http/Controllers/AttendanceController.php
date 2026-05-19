@@ -45,6 +45,18 @@ class AttendanceController extends Controller
             return ApiResponse::Error($e->getMessage());
         }
     }
+    public function indexTodayAdmin(Request $request) {
+        try {
+            $page = $request->page ?? 1;
+            $perPage = $request->per_page ?? 10;
+            $params = $request->only(['search','date_from','date_to','status','kelas_id']);
+            $result = $this->repo->getListTodayAdmin($params, $page, $perPage);
+            
+            return ApiResponse::Paginate($result->items(), 'Data absensi hari ini berhasil diambil', PaginationHelper::meta($result));
+        } catch (\Exception $e) {
+            return ApiResponse::Error($e->getMessage());
+        }
+    }
 
     public function listByTeacher(Request $request) {
         try {
@@ -212,9 +224,11 @@ class AttendanceController extends Controller
 
     public function recap(Request $request) {
         try {
+            $page = $request->page ?? 1;
+            $perPage = $request->per_page ?? 10;
             $params = $request->only(['month', 'year', 'kelas_id', 'status']);
-            $data = $this->repo->recap($params);
-            return ApiResponse::Success($data, 'Rekap absensi berhasil diambil');
+            $data = $this->repo->recap($params, $page, $perPage);
+            return ApiResponse::Paginate($data->items(), 'Rekap absensi berhasil diambil', PaginationHelper::meta($data));
         } catch (\Exception $e) {
             return ApiResponse::Error($e->getMessage());
         }

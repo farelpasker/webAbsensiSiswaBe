@@ -6,6 +6,8 @@ use App\Exports\AttendanceExport;
 use App\Exports\RecapExport;
 use App\Exports\RecapByClassTeacherExport;
 use App\Models\Attendance;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AttendanceRepository
@@ -63,6 +65,39 @@ class AttendanceRepository
             'tidak_hadir_count' => $tidakHadirCount,
             'paginate' => $paginate
         ];
+    }
+    public function getListTodayAdmin($params, int $page = 1, int $perPage = 10): LengthAwarePaginator
+    {
+        $query = $this->model->query()->with('student:id,nis,user_id,kelas_id','student.user:id,name,avatar','student.kelas:id,nama')
+        ->whereDate('date', now()->toDateString());
+
+        if(isset($params['search']) && !empty($params['search'])) {
+            $search = $params['search'];
+            $query->whereHas('student.user', function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%');
+            })->orWhere('date', 'like', '%' . $search . '%');
+        }
+
+        if(isset($params['date_from']) && isset($params['date_to'])) {
+            $query->whereBetween('date', [$params['date_from'], $params['date_to']]);
+        } elseif (isset($params['date_from'])) {
+            $query->where('date', '>=', $params['date_from']);
+        } elseif (isset($params['date_to'])) {
+            $query->where('date', '<=', $params['date_to']);
+        }
+
+        if(isset($params['status']) && !empty($params['status'])) {
+            $query->where('status', $params['status']);
+        }
+
+        if(isset($params['kelas_id']) && !empty($params['kelas_id'])) {
+            $query->whereHas('student', function($q) use ($params) {
+                $q->where('kelas_id', $params['kelas_id']);
+            });
+        }
+
+        return $query->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function getDetail($id)
@@ -172,11 +207,11 @@ class AttendanceRepository
         );
     }
 
-    public function recap(array $params) {
+    public function recap(array $params, int $page = 1, int $perPage = 10) {
 
         $students = $this->studentRepo->getList()->get();
 
-        return $students->map(function($student) use ($params) {
+        $data = $students->map(function($student) use ($params) {
             $query = $this->model->query()->where('student_id', $student->id);
 
             if(isset($params['month']) && !empty($params['month'])) {
@@ -196,15 +231,29 @@ class AttendanceRepository
             return [
                 'siswa_id' => $student->id,
                 'siswa_name' => $student->user->name,
-                'total' => (clone $query)->count(),
-                'hadir' => (clone $query)->where('status', 'hadir')->count(),
-                'izin' => (clone $query)->where('status', 'izin')->count(),
-                'sakit' => (clone $query)->where('status', 'sakit')->count(),
-                'alpha' => (clone $query)->where('status', 'tidak hadir')->count(),
-                'libur' => (clone $query)->where('status', 'libur')->count(),
+                'siswa_nis' => $student->nis,
+                'kelas_name' => $student->kelas ? $student->kelas->nama : null,
+                'hadir' => (clone $query)->whereIn('status', ['hadir','telat'])->count(),
                 'terlambat' => (clone $query)->where('status', 'telat')->count(),
+                'izindansakit' => (clone $query)->whereIn('status', ['izin','sakit'])->count(),
+                'alpha' => (clone $query)->where('status', 'tidak hadir')->count(),
             ];
-        });
+        })->values();
+
+        // Buat pagination dari collection
+        $total = $data->count();
+        $items = $data->forPage($page, $perPage);
+        
+        return new LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'query' => Paginator::resolveQueryString(),
+            ]
+        );
     }
 
     public function recapClassByTeacher($teacherId, array $params, $kelasId) {
