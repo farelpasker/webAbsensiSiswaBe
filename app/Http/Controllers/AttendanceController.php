@@ -226,7 +226,7 @@ class AttendanceController extends Controller
         try {
             $page = $request->page ?? 1;
             $perPage = $request->per_page ?? 10;
-            $params = $request->only(['month', 'year', 'kelas_id', 'status']);
+            $params = $request->only(['month', 'year', 'kelas_id', 'status', 'search']);
             $data = $this->repo->recap($params, $page, $perPage);
             return ApiResponse::Paginate($data->items(), 'Rekap absensi berhasil diambil', PaginationHelper::meta($data));
         } catch (\Exception $e) {

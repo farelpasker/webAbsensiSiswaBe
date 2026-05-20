@@ -208,10 +208,51 @@ class AttendanceRepository
     }
 
     public function recap(array $params, int $page = 1, int $perPage = 10) {
+        $studentQuery = $this->studentRepo->getList();
 
-        $students = $this->studentRepo->getList()->get();
+        if (isset($params['kelas_id']) && !empty($params['kelas_id'])) {
+            $studentQuery->where('kelas_id', $params['kelas_id']);
+        }
 
-        $data = $students->map(function($student) use ($params) {
+        if (isset($params['search']) && !empty($params['search'])) {
+            $search = $params['search'];
+            $studentQuery->where(function($q) use ($search) {
+                $q->where('nis', 'like', '%' . $search . '%')
+                  ->orWhereHas('user', function($qu) use ($search) {
+                      $qu->where('name', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+
+        if (isset($params['status']) && !empty($params['status'])) {
+            $status = $params['status'];
+            $studentQuery->whereHas('attendances', function($q) use ($status, $params) {
+                if ($status === 'hadir') {
+                    $q->whereIn('status', ['hadir', 'telat']);
+                } else if ($status === 'tidak hadir') {
+                    $q->where('status', 'tidak hadir');
+                } else if ($status === 'izin') {
+                    $q->where('status', 'izin');
+                } else if ($status === 'sakit') {
+                    $q->where('status', 'sakit');
+                } else if ($status === 'telat') {
+                    $q->where('status', 'telat');
+                }
+                
+                if (isset($params['month']) && !empty($params['month'])) {
+                    $q->whereMonth('created_at', $params['month']);
+                }
+                if (isset($params['year']) && !empty($params['year'])) {
+                    $q->whereYear('created_at', $params['year']);
+                }
+            });
+        }
+
+        // Paginate the student query builder FIRST for performance optimization (fixes N+1 database queries)
+        $paginatedStudents = $studentQuery->paginate($perPage, ['*'], 'page', $page);
+
+        // Map only the paginated items
+        $mappedItems = collect($paginatedStudents->items())->map(function($student) use ($params) {
             $query = $this->model->query()->where('student_id', $student->id);
 
             if(isset($params['month']) && !empty($params['month'])) {
@@ -220,12 +261,6 @@ class AttendanceRepository
 
             if(isset($params['year']) && !empty($params['year'])) {
                 $query->whereYear('created_at', $params['year']);
-            }
-
-            if(isset($params['kelas_id']) && !empty($params['kelas_id'])) {
-                $query->whereHas('student', function($q) use ($params) {
-                    $q->where('kelas_id', $params['kelas_id']);
-                });
             }
 
             return [
@@ -238,17 +273,13 @@ class AttendanceRepository
                 'izindansakit' => (clone $query)->whereIn('status', ['izin','sakit'])->count(),
                 'alpha' => (clone $query)->where('status', 'tidak hadir')->count(),
             ];
-        })->values();
+        });
 
-        // Buat pagination dari collection
-        $total = $data->count();
-        $items = $data->forPage($page, $perPage);
-        
         return new LengthAwarePaginator(
-            $items,
-            $total,
-            $perPage,
-            $page,
+            $mappedItems,
+            $paginatedStudents->total(),
+            $paginatedStudents->perPage(),
+            $paginatedStudents->currentPage(),
             [
                 'path' => Paginator::resolveCurrentPath(),
                 'query' => Paginator::resolveQueryString(),
